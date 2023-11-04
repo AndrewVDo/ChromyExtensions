@@ -1,0 +1,21 @@
+{
+  "name": "HIDR - Enhanced Fullscreen",
+  "description": "Extended functionality in fullscreen mode",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "action.html",
+    "default_icon": "action.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*",
+        "file://*/*"
+      ],
+      "js": [
+        "scripts/topbar-injector.js"
+      ]
+    }
+  ]
+}
