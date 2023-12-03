@@ -1,49 +1,120 @@
 import * as React from 'react';
-import { useState } from 'react'
-import { parse } from 'csv-parse/sync';
+import { useState } from 'react';
+import { ParseResult } from 'papaparse';
+import { readString } from 'react-papaparse';
 import { Switch } from '@mui/base/Switch';
 import { TextareaAutosize } from '@mui/base/TextareaAutosize';
 import { DataGrid } from '@mui/x-data-grid';
-
-
-
-function detectCsvDelimiter(csvString: string) {
-    const potentialDelimiters = [',', ';', '\t'];
-    const delimiterCounts = potentialDelimiters.map(delimiter => {
-        const lines = csvString.split('\n').slice(0, 5);
-        const count = lines.reduce((acc, line) => acc + line.split(delimiter).length - 1, 0);
-        return { delimiter, count };
-    });
-    const sortedDelimiters = delimiterCounts.sort((a, b) => b.count - a.count);
-    return sortedDelimiters[0].delimiter;
-}
-
-
-// function TextPreview({ records: any[] }) {
-//     const columnNames = records[0]
-
-//     return (
-//         <DataGrid
-//             rows={records}
-//         />
-//     )
-// }
+import './TextInput.css';
 
 
 function TextInput() {
-    const [csvData, setCsvData] = useState('');
     const [hasColumnNames, setHasColumnNames] = useState(false);
+    const [rawText, setRawText] = useState('');
+    const [records, setRecords] = useState<ParseResult<unknown>>();
 
-    let detectedDelimiter = detectCsvDelimiter(csvData);
-    let records = parse(csvData, { columns: hasColumnNames })
 
-    function handleCsvChange(event: object) {
-        setCsvData(event.target.value)
+    // Helper Functions-----------------------------------------------------------------------
+    function readRawText(rawText: string, hasColumnNames: boolean) {
+        readString(rawText, {
+            header: hasColumnNames,
+            worker: true,
+            complete: (results) => {
+                setRecords(results);
+        }});
     }
 
-    function handleHasColumnNamesChange(event: object) {
-        setHasColumnNames(event.target.value)
+    interface DGRecord {
+        id: number, // required
+        [key: string]: any
     }
+
+    function getRows() {
+        if (!records?.data) {
+            return [];
+        }
+
+        const fields = getFields();
+        console.log(fields);
+
+        let result = [];
+        for (let i=0; i<records?.data.length; i++) {
+            let record = records?.data[i] as DGRecord;
+
+            if (Array.isArray(record) && !hasColumnNames) {
+                const recordAsObj = record.reduce((result, item, index) => {
+                    if (fields[index] && !Object.hasOwn(fields[index], 'field')) {
+                        return result;
+                    }
+                    const fieldName = fields[index]['field']; 
+                    result[fieldName] = item;
+                    return result;
+                }, {} as DGRecord);
+                recordAsObj['id'] = i;
+                result.push(recordAsObj);
+
+            } else if (record && typeof record === "object" && hasColumnNames) {
+                if (!Object.hasOwn(record, 'id')) {
+                    record['id'] = i;
+                }
+                result.push(record);
+            }
+        }
+
+        console.log(result)
+        return result;
+    }
+
+    interface DGField {
+        field: string,
+        headerName: string,
+        width: number
+    }
+
+    function getFields() {
+        let fields = [] as DGField[];
+
+        let fieldNames = [] as string[];
+        if (!hasColumnNames || records?.meta.fields) {
+            const delimiter = records?.meta.delimiter
+            const firstLine = rawText.split('\n')[0];
+            if (firstLine && delimiter) {
+                for (let i=0; i<firstLine.split(delimiter).length; i++) {
+                    fieldNames.push("column_" + i)
+                }
+            }
+        } else {
+            fieldNames = records?.meta.fields;
+        }
+
+        for (let fieldName in fieldNames) {
+            let dgField = {} as DGField;
+            dgField['field'] = fieldName.replace(/ /g, '_');
+            dgField['headerName'] = fieldName;
+            dgField['width'] = 150;
+            fields.push(dgField);
+        }
+
+        return fields;
+    }
+    // Helper Functions
+
+
+    // Change Handlers----------------------------------------------------------------------
+    function handleCsvChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
+        const newRawText = event.target.value;
+        setRawText(newRawText);
+        readRawText(newRawText, hasColumnNames);
+    }
+
+
+    function handleHasColumnNamesChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const newHasColumnNames = event.target.checked;
+        setHasColumnNames(newHasColumnNames);
+        readRawText(rawText, newHasColumnNames);
+    }
+    // Change Handlers-----------------------------------------------------------------------
+
 
     return (
         <div className='Text'>
@@ -53,17 +124,16 @@ function TextInput() {
                 placeholder="Paste spreadsheet data here."
                 onChange={handleCsvChange}
             />
+            <br></br>
             <label>Column names in first row: </label>
             <Switch
                 checked={hasColumnNames}
                 onChange={handleHasColumnNamesChange}
             />
             <DataGrid
-                rows={records}
+                rows={getRows()}
+                columns={getFields()}
             />
-            {/* <TextPreview
-                records={records}
-            /> */}
         </div>
     )
 }
