@@ -1,5 +1,12 @@
 body {
-    width: 600px;
+    width: 800px;
     height: 600px;
   }
   
+  .Text {
+    width: 95%;
+  }
+
+  textarea {
+    width: 95%;
+  }

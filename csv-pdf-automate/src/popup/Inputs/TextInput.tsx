@@ -35,7 +35,6 @@ function TextInput() {
         }
 
         const fields = getFields();
-        console.log(fields);
 
         let result = [];
         for (let i=0; i<records?.data.length; i++) {
@@ -46,6 +45,7 @@ function TextInput() {
                     if (fields[index] && !Object.hasOwn(fields[index], 'field')) {
                         return result;
                     }
+                    console.log(fields);
                     const fieldName = fields[index]['field']; 
                     result[fieldName] = item;
                     return result;
@@ -61,6 +61,7 @@ function TextInput() {
             }
         }
 
+        console.log("getRows with result output");
         console.log(result)
         return result;
     }
@@ -75,7 +76,7 @@ function TextInput() {
         let fields = [] as DGField[];
 
         let fieldNames = [] as string[];
-        if (!hasColumnNames || records?.meta.fields) {
+        if (!hasColumnNames || !records?.meta.fields) {
             const delimiter = records?.meta.delimiter
             const firstLine = rawText.split('\n')[0];
             if (firstLine && delimiter) {
@@ -87,7 +88,8 @@ function TextInput() {
             fieldNames = records?.meta.fields;
         }
 
-        for (let fieldName in fieldNames) {
+        for (let i=0; i<fieldNames.length; i++) {
+            let fieldName = fieldNames[i];
             let dgField = {} as DGField;
             dgField['field'] = fieldName.replace(/ /g, '_');
             dgField['headerName'] = fieldName;
@@ -95,6 +97,9 @@ function TextInput() {
             fields.push(dgField);
         }
 
+        console.log("getFields with records input and fields output");
+        console.log(records?.meta);
+        console.log(fields);
         return fields;
     }
     // Helper Functions
@@ -119,8 +124,8 @@ function TextInput() {
     return (
         <div className='Text'>
             <TextareaAutosize
-                minRows={3}
-                maxRows={3}
+                minRows={4}
+                maxRows={4}
                 placeholder="Paste spreadsheet data here."
                 onChange={handleCsvChange}
             />
@@ -133,6 +138,14 @@ function TextInput() {
             <DataGrid
                 rows={getRows()}
                 columns={getFields()}
+                initialState={{
+                    pagination: {
+                      paginationModel: {
+                        pageSize: 5,
+                      },
+                    },
+                }}
+                pageSizeOptions={[5]}
             />
         </div>
     )
