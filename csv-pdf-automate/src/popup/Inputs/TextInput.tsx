@@ -1,17 +1,35 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { ParseResult } from 'papaparse';
-import { readString } from 'react-papaparse';
+import { readString } from 'react-papaparse'
+;
 import { Switch } from '@mui/base/Switch';
-import { TextareaAutosize } from '@mui/base/TextareaAutosize';
+import TextField from '@mui/material/TextField';
 import { DataGrid } from '@mui/x-data-grid';
+import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import TabContext from '@mui/lab/TabContext';
+import TabList from '@mui/lab/TabList';
+import TabPanel from '@mui/lab/TabPanel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Button from '@mui/material/Button';
+import { styled } from '@mui/material/styles';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+
+
+
 import './TextInput.css';
 
 
 function TextInput() {
-    const [hasColumnNames, setHasColumnNames] = useState(false);
+    const [tabIndex, setTabIndex] = useState('1');
+    const [hasColumnNames, setHasColumnNames] = useState('true');
     const [rawText, setRawText] = useState('');
     const [records, setRecords] = useState<ParseResult<unknown>>();
+    const [delimiter, setDelimiter] = useState('auto');
 
 
     // Helper Functions-----------------------------------------------------------------------
@@ -22,6 +40,18 @@ function TextInput() {
             complete: (results) => {
                 setRecords(results);
         }});
+    }
+
+    function delayedSetTabIndex(delayTime: number) {
+        delayTime = Math.min(10000, delayTime);
+        delayTime = Math.max(1000, delayTime);
+        setTimeout(() => {
+            setTabIndex("2");
+        }, delayTime);
+    }
+
+    function hasColumnNamesAsBool() {
+        return hasColumnNames == "true" ? true : false;
     }
 
     interface DGRecord {
@@ -40,7 +70,7 @@ function TextInput() {
         for (let i=0; i<records?.data.length; i++) {
             let record = records?.data[i] as DGRecord;
 
-            if (Array.isArray(record) && !hasColumnNames) {
+            if (Array.isArray(record) && !hasColumnNamesAsBool()) {
                 const recordAsObj = record.reduce((result, item, index) => {
                     if (fields[index] && !Object.hasOwn(fields[index], 'field')) {
                         return result;
@@ -53,7 +83,7 @@ function TextInput() {
                 recordAsObj['id'] = i;
                 result.push(recordAsObj);
 
-            } else if (record && typeof record === "object" && hasColumnNames) {
+            } else if (record && typeof record === "object" && hasColumnNamesAsBool()) {
                 if (!Object.hasOwn(record, 'id')) {
                     record['id'] = i;
                 }
@@ -76,11 +106,16 @@ function TextInput() {
         let fields = [] as DGField[];
 
         let fieldNames = [] as string[];
-        if (!hasColumnNames || !records?.meta.fields) {
-            const delimiter = records?.meta.delimiter
+        if (!hasColumnNamesAsBool() || !records?.meta.fields) {
+            var finalDelimiter;
+            if (delimiter == "auto") {
+                finalDelimiter = records?.meta.delimiter;
+            } else {
+                finalDelimiter = delimiter;
+            }
             const firstLine = rawText.split('\n')[0];
-            if (firstLine && delimiter) {
-                for (let i=0; i<firstLine.split(delimiter).length; i++) {
+            if (firstLine && finalDelimiter) {
+                for (let i=0; i<firstLine.split(finalDelimiter).length; i++) {
                     fieldNames.push("column_" + i)
                 }
             }
@@ -93,7 +128,7 @@ function TextInput() {
             let dgField = {} as DGField;
             dgField['field'] = fieldName.replace(/ /g, '_');
             dgField['headerName'] = fieldName;
-            dgField['width'] = 150;
+            dgField['width'] = 100;
             fields.push(dgField);
         }
 
@@ -102,6 +137,18 @@ function TextInput() {
         console.log(fields);
         return fields;
     }
+
+    const FileUploadStyleInput = styled('input')({
+        clip: 'rect(0 0 0 0)',
+        clipPath: 'inset(50%)',
+        height: 1,
+        overflow: 'hidden',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        whiteSpace: 'nowrap',
+        width: 1,
+      });
     // Helper Functions
 
 
@@ -109,44 +156,108 @@ function TextInput() {
     function handleCsvChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
         const newRawText = event.target.value;
         setRawText(newRawText);
-        readRawText(newRawText, hasColumnNames);
+        readRawText(newRawText, hasColumnNamesAsBool());
     }
 
-
-    function handleHasColumnNamesChange(event: React.ChangeEvent<HTMLInputElement>) {
-        const newHasColumnNames = event.target.checked;
+    function handleDetectColumnNamesChange(event: SelectChangeEvent) {
+        const newHasColumnNames = event.target.value;
+        const newHasColumnNamesAsBool = event.target.value as string == "true" ? true : false;
         setHasColumnNames(newHasColumnNames);
-        readRawText(rawText, newHasColumnNames);
+        readRawText(rawText, newHasColumnNamesAsBool);
+    }
+
+    function handleTabChange(event: React.SyntheticEvent, newValue: string) {
+        setTabIndex(newValue);
+    }
+
+    function handleDelimiterChange(event: SelectChangeEvent) {
+        setDelimiter(event.target.value as string);
+    }
+
+    function handleClear() {
+        setRawText('');
+        readRawText('', hasColumnNamesAsBool());
+    }
+
+    function handleFormat() {
+        setTabIndex('2');
     }
     // Change Handlers-----------------------------------------------------------------------
 
 
     return (
         <div className='Text'>
-            <TextareaAutosize
-                minRows={4}
-                maxRows={4}
-                placeholder="Paste spreadsheet data here."
-                onChange={handleCsvChange}
-            />
-            <br></br>
-            <label>Column names in first row: </label>
-            <Switch
-                checked={hasColumnNames}
-                onChange={handleHasColumnNamesChange}
-            />
-            <DataGrid
-                rows={getRows()}
-                columns={getFields()}
-                initialState={{
-                    pagination: {
-                      paginationModel: {
-                        pageSize: 5,
-                      },
-                    },
-                }}
-                pageSizeOptions={[5]}
-            />
+            <Box sx={{ width: '100%', height: '325px'}}>
+                <TabContext value={tabIndex}>
+                    <Box sx={{ borderBottom: 1 }}>
+                        <TabList onChange={handleTabChange}>
+                            <Tab label="Raw Data Input" value="1" />
+                            <Tab label="Formatted Data" value="2" />
+                        </TabList>
+                    </Box>
+                    <TabPanel value="1">
+                        <FormControl sx={{ m: 1, minWidth: 360 }}>
+                            <InputLabel id="detect-column-names-label">Detect column names</InputLabel>
+                            <Select
+                                labelId="detect-column-names-label"
+                                id="detect-column-names"
+                                value={hasColumnNames}
+                                label="Detect column names"
+                                onChange={handleDetectColumnNamesChange}
+                            >
+                                <MenuItem value={'true'}>On</MenuItem>
+                                <MenuItem value={'false'}>Off</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl sx={{ m: 1, minWidth: 360 }}>
+                            <InputLabel id="force-select-delimiter-label">Delimiter</InputLabel>
+                            <Select
+                                labelId="force-select-delimiter-label"
+                                id="force-select-delimiter"
+                                value={delimiter}
+                                label="Delimiter"
+                                onChange={handleDelimiterChange}
+                            >
+                                <MenuItem value={'auto'}>Auto</MenuItem>
+                                <MenuItem value={','}>Comma</MenuItem>
+                                <MenuItem value={'\t'}>Tab</MenuItem>
+                                <MenuItem value={':'}>Colon</MenuItem>
+                                <MenuItem value={';'}>Semicolon</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />}>
+                            Upload file
+                            <FileUploadStyleInput type="file" />
+                        </Button>
+                        <TextField
+                            label="CSV Input"
+                            multiline
+                            fullWidth
+                            rows={4}
+                            placeholder="Paste spreadsheet data here."
+                            onChange={handleCsvChange}
+                            value={rawText}
+                        />
+                        <Button variant="outlined" onClick={handleClear}>Clear</Button>
+                        <Button variant="contained" onClick={handleFormat}>Format</Button>
+
+                    </TabPanel>
+                    <TabPanel value="2">
+                        <DataGrid
+                            rows={getRows()}
+                            columns={getFields()}
+                            initialState={{
+                                pagination: {
+                                paginationModel: {
+                                    pageSize: 2,
+                                },
+                                },
+                            }}
+                            pageSizeOptions={[2]}
+                        />
+                    </TabPanel>
+                </TabContext>
+            </Box>
         </div>
     )
 }
