@@ -1,9 +1,8 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { ParseResult } from 'papaparse';
-import { readString } from 'react-papaparse'
-;
-import { Switch } from '@mui/base/Switch';
+import { readString } from 'react-papaparse';
+
 import TextField from '@mui/material/TextField';
 import { DataGrid } from '@mui/x-data-grid';
 import Box from '@mui/material/Box';
@@ -30,6 +29,7 @@ function TextInput() {
     const [rawText, setRawText] = useState('');
     const [records, setRecords] = useState<ParseResult<unknown>>();
     const [delimiter, setDelimiter] = useState('auto');
+    const [imageTemplate, setImageTemplate] = useState<File|null>(null);
 
 
     // Helper Functions-----------------------------------------------------------------------
@@ -75,7 +75,6 @@ function TextInput() {
                     if (fields[index] && !Object.hasOwn(fields[index], 'field')) {
                         return result;
                     }
-                    console.log(fields);
                     const fieldName = fields[index]['field']; 
                     result[fieldName] = item;
                     return result;
@@ -91,8 +90,6 @@ function TextInput() {
             }
         }
 
-        console.log("getRows with result output");
-        console.log(result)
         return result;
     }
 
@@ -132,23 +129,8 @@ function TextInput() {
             fields.push(dgField);
         }
 
-        console.log("getFields with records input and fields output");
-        console.log(records?.meta);
-        console.log(fields);
         return fields;
     }
-
-    const FileUploadStyleInput = styled('input')({
-        clip: 'rect(0 0 0 0)',
-        clipPath: 'inset(50%)',
-        height: 1,
-        overflow: 'hidden',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        whiteSpace: 'nowrap',
-        width: 1,
-      });
     // Helper Functions
 
 
@@ -181,6 +163,18 @@ function TextInput() {
 
     function handleFormat() {
         setTabIndex('2');
+    }
+
+    function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+        if (!event.target || !event.target.files) {
+            return;
+        } else if (event.target.files.length > 1) {
+            console.warn(`${handleImageUpload.name} unexpectedly uncountered multiple files ${event.target.files}`);
+        } else if (event.target.files.length == 1) {
+            setImageTemplate(event.target.files[0]);
+        } else {
+            setImageTemplate(null);
+        }
     }
     // Change Handlers-----------------------------------------------------------------------
 
@@ -225,10 +219,12 @@ function TextInput() {
                                 <MenuItem value={';'}>Semicolon</MenuItem>
                             </Select>
                         </FormControl>
-                        <Button component="label" variant="contained" startIcon={<CloudUploadIcon />}>
-                            Upload file
-                            <FileUploadStyleInput type="file" />
-                        </Button>
+                        <input accept="image/*" style={{ display: 'none' }} id="image-input" type="file" onChange={handleImageUpload}></input>
+                        <label htmlFor='image-input'>
+                            <Button component="span" variant="contained" startIcon={<CloudUploadIcon />}>
+                                Upload File
+                            </Button>
+                        </label>
                         <TextField
                             label="CSV Input"
                             multiline
