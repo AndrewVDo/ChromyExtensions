@@ -161,6 +161,7 @@ function TextInput() {
     function handleClear() {
         setRawText('');
         readRawText('', hasColumnNamesAsBool());
+        setImageTemplate(undefined);
     }
 
     function handleFormat() {
@@ -234,7 +235,7 @@ function TextInput() {
                                 <Grid container direction="column" spacing={2} sx={{ height: '500px' }}>
                                     <Grid xs={5}>
                                         <ImageUploadPreview
-                                            height='240px'
+                                            height='230px'
                                             imageTemplate={imageTemplate}
                                             setImageTemplate={setImageTemplate}
                                         />

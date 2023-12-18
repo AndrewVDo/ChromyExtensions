@@ -17,8 +17,7 @@ const ImageUploadPreview: React.FunctionComponent<ImageUploadPreviewProps> = ({ 
         return (
             <Box
                 sx={{
-                    height: height,
-                    'z-index': ''
+                    height: height
                 }}>
                 <Box
                     // className='image-upload-preview'
@@ -42,7 +41,7 @@ const ImageUploadPreview: React.FunctionComponent<ImageUploadPreviewProps> = ({ 
                 <label htmlFor='image-input'>
                     <Grid
                         sx={{
-                            height: height,
+                            height: height
                         }}
                         className='image-upload-preview'
                         container
@@ -69,7 +68,6 @@ const ImageUploadPreview: React.FunctionComponent<ImageUploadPreviewProps> = ({ 
             <Box
                 sx={{
                     height: height,
-                    width: '100%',
                     'object-fit': 'cover'
                 }}
                 className='image-upload-preview-img'
