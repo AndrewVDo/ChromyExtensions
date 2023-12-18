@@ -1,0 +1,18 @@
+.image-upload-preview,
+.image-upload-preview-img {
+    cursor: grab;
+    border: 1px solid black;
+}
+
+.image-upload-preview-img:hover {
+    -webkit-transition: all 0.5s linear;
+    -moz-transition: all 0.5s linear;
+    -ms-transition: all 0.5s linear;
+    -o-transition: all 0.5s linear;
+    transition: all 0.5s linear;
+}
+
+.image-upload-preview-img:hover {
+    opacity: 0.3;
+    background-color: black;
+}

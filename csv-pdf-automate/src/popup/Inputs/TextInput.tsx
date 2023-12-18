@@ -10,17 +10,18 @@ import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import InputLabel from '@mui/material/InputLabel';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
 import Button from '@mui/material/Button';
-import { styled } from '@mui/material/styles';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import Grid from '@mui/material/Unstable_Grid2'; // Grid version 2
 
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormControl from '@mui/material/FormControl';
+import FormLabel from '@mui/material/FormLabel';
 
 
 import './TextInput.css';
+import ImageUploadPreview from './ImageUploadPreview';
 
 
 function TextInput() {
@@ -29,8 +30,7 @@ function TextInput() {
     const [rawText, setRawText] = useState('');
     const [records, setRecords] = useState<ParseResult<unknown>>();
     const [delimiter, setDelimiter] = useState('auto');
-    const [imageTemplate, setImageTemplate] = useState<File|null>(null);
-
+    const [imageTemplate, setImageTemplate] = useState<string | undefined>(undefined);
 
     // Helper Functions-----------------------------------------------------------------------
     function readRawText(rawText: string, hasColumnNames: boolean) {
@@ -39,7 +39,8 @@ function TextInput() {
             worker: true,
             complete: (results) => {
                 setRecords(results);
-        }});
+            }
+        });
     }
 
     function delayedSetTabIndex(delayTime: number) {
@@ -67,7 +68,7 @@ function TextInput() {
         const fields = getFields();
 
         let result = [];
-        for (let i=0; i<records?.data.length; i++) {
+        for (let i = 0; i < records?.data.length; i++) {
             let record = records?.data[i] as DGRecord;
 
             if (Array.isArray(record) && !hasColumnNamesAsBool()) {
@@ -75,7 +76,7 @@ function TextInput() {
                     if (fields[index] && !Object.hasOwn(fields[index], 'field')) {
                         return result;
                     }
-                    const fieldName = fields[index]['field']; 
+                    const fieldName = fields[index]['field'];
                     result[fieldName] = item;
                     return result;
                 }, {} as DGRecord);
@@ -112,7 +113,7 @@ function TextInput() {
             }
             const firstLine = rawText.split('\n')[0];
             if (firstLine && finalDelimiter) {
-                for (let i=0; i<firstLine.split(finalDelimiter).length; i++) {
+                for (let i = 0; i < firstLine.split(finalDelimiter).length; i++) {
                     fieldNames.push("column_" + i)
                 }
             }
@@ -120,7 +121,7 @@ function TextInput() {
             fieldNames = records?.meta.fields;
         }
 
-        for (let i=0; i<fieldNames.length; i++) {
+        for (let i = 0; i < fieldNames.length; i++) {
             let fieldName = fieldNames[i];
             let dgField = {} as DGField;
             dgField['field'] = fieldName.replace(/ /g, '_');
@@ -131,6 +132,7 @@ function TextInput() {
 
         return fields;
     }
+
     // Helper Functions
 
 
@@ -141,7 +143,7 @@ function TextInput() {
         readRawText(newRawText, hasColumnNamesAsBool());
     }
 
-    function handleDetectColumnNamesChange(event: SelectChangeEvent) {
+    function handleDetectColumnNamesChange(event: React.ChangeEvent<HTMLInputElement>) {
         const newHasColumnNames = event.target.value;
         const newHasColumnNamesAsBool = event.target.value as string == "true" ? true : false;
         setHasColumnNames(newHasColumnNames);
@@ -152,7 +154,7 @@ function TextInput() {
         setTabIndex(newValue);
     }
 
-    function handleDelimiterChange(event: SelectChangeEvent) {
+    function handleDelimiterChange(event: React.ChangeEvent<HTMLInputElement>) {
         setDelimiter(event.target.value as string);
     }
 
@@ -171,9 +173,9 @@ function TextInput() {
         } else if (event.target.files.length > 1) {
             console.warn(`${handleImageUpload.name} unexpectedly uncountered multiple files ${event.target.files}`);
         } else if (event.target.files.length == 1) {
-            setImageTemplate(event.target.files[0]);
+            setImageTemplate(URL.createObjectURL(event.target.files[0]));
         } else {
-            setImageTemplate(null);
+            setImageTemplate(undefined);
         }
     }
     // Change Handlers-----------------------------------------------------------------------
@@ -181,80 +183,124 @@ function TextInput() {
 
     return (
         <div className='Text'>
-            <Box sx={{ width: '100%', height: '325px'}}>
+            <Box sx={{ width: '100%', height: '595px' }}>
                 <TabContext value={tabIndex}>
                     <Box sx={{ borderBottom: 1 }}>
                         <TabList onChange={handleTabChange}>
-                            <Tab label="Raw Data Input" value="1" />
-                            <Tab label="Formatted Data" value="2" />
+                            <Tab label="Data Input" value="1" />
+                            <Tab label="Data Preview" value="2" />
                         </TabList>
                     </Box>
                     <TabPanel value="1">
-                        <FormControl sx={{ m: 1, minWidth: 360 }}>
-                            <InputLabel id="detect-column-names-label">Detect column names</InputLabel>
-                            <Select
-                                labelId="detect-column-names-label"
-                                id="detect-column-names"
-                                value={hasColumnNames}
-                                label="Detect column names"
-                                onChange={handleDetectColumnNamesChange}
-                            >
-                                <MenuItem value={'true'}>On</MenuItem>
-                                <MenuItem value={'false'}>Off</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl sx={{ m: 1, minWidth: 360 }}>
-                            <InputLabel id="force-select-delimiter-label">Delimiter</InputLabel>
-                            <Select
-                                labelId="force-select-delimiter-label"
-                                id="force-select-delimiter"
-                                value={delimiter}
-                                label="Delimiter"
-                                onChange={handleDelimiterChange}
-                            >
-                                <MenuItem value={'auto'}>Auto</MenuItem>
-                                <MenuItem value={','}>Comma</MenuItem>
-                                <MenuItem value={'\t'}>Tab</MenuItem>
-                                <MenuItem value={':'}>Colon</MenuItem>
-                                <MenuItem value={';'}>Semicolon</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <input accept="image/*" style={{ display: 'none' }} id="image-input" type="file" onChange={handleImageUpload}></input>
-                        <label htmlFor='image-input'>
-                            <Button component="span" variant="contained" startIcon={<CloudUploadIcon />}>
-                                Upload File
-                            </Button>
-                        </label>
-                        <TextField
-                            label="CSV Input"
-                            multiline
-                            fullWidth
-                            rows={4}
-                            placeholder="Paste spreadsheet data here."
-                            onChange={handleCsvChange}
-                            value={rawText}
-                        />
-                        <Button variant="outlined" onClick={handleClear}>Clear</Button>
-                        <Button variant="contained" onClick={handleFormat}>Format</Button>
+                        <Grid container spacing={2}>
+                            <Grid xs={3}>
+                                <Grid container direction="column" spacing={2}>
+                                    <Grid>
+                                        <FormControl>
+                                            <FormLabel id="radio-group-has-header">Detect column names</FormLabel>
+                                            <RadioGroup
+                                                aria-labelledby="radio-group-has-header"
+                                                value={hasColumnNames}
+                                                defaultValue={'true'}
+                                                onChange={handleDetectColumnNamesChange}
+                                            >
+                                                <FormControlLabel control={<Radio />} value={'true'} label="On" />
+                                                <FormControlLabel control={<Radio />} value={'false'} label="Off" />
+                                            </RadioGroup>
+                                        </FormControl>
+                                    </Grid>
 
+                                    <Grid>
+                                        <FormControl>
+                                            <FormLabel id="radio-group-delimiter">Column delimiter</FormLabel>
+                                            <RadioGroup
+                                                aria-labelledby="radio-group-delimiter"
+                                                value={delimiter}
+                                                defaultValue={'auto'}
+                                                onChange={handleDelimiterChange}
+                                            >
+                                                <FormControlLabel control={<Radio />} value={'auto'} label="Auto" />
+                                                <FormControlLabel control={<Radio />} value={','} label="," />
+                                                <FormControlLabel control={<Radio />} value={'\t'} label="\t" />
+                                                <FormControlLabel control={<Radio />} value={':'} label=":" />
+                                                <FormControlLabel control={<Radio />} value={';'} label=";" />
+                                            </RadioGroup>
+                                        </FormControl>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                            <Grid xs={9}>
+
+                                <Grid container direction="column" spacing={2} sx={{ height: '500px' }}>
+                                    <Grid xs={5}>
+                                        <ImageUploadPreview
+                                            height='240px'
+                                            imageTemplate={imageTemplate}
+                                            setImageTemplate={setImageTemplate}
+                                        />
+                                    </Grid>
+
+                                    <Grid xs={6}>
+                                        <TextField
+                                            label="CSV Input"
+                                            multiline
+                                            fullWidth
+                                            rows={6}
+                                            placeholder="Paste spreadsheet data here."
+                                            onChange={handleCsvChange}
+                                            value={rawText}
+                                        />
+                                    </Grid>
+
+                                    <Grid xs={1}>
+                                        <Grid container direction="row-reverse" spacing={2}>
+                                            <Grid>
+                                                <Button variant="contained" onClick={handleFormat}>Format</Button>
+                                            </Grid>
+
+                                            <Grid>
+                                                <Button variant="outlined" onClick={handleClear}>Clear</Button>
+                                            </Grid>
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Grid>
                     </TabPanel>
                     <TabPanel value="2">
-                        <DataGrid
-                            rows={getRows()}
-                            columns={getFields()}
-                            initialState={{
-                                pagination: {
-                                paginationModel: {
-                                    pageSize: 2,
-                                },
-                                },
-                            }}
-                            pageSizeOptions={[2]}
-                        />
+                        <Grid container spacing={2} sx={{ width: '100%' }}>
+                            <Grid xs={12}>
+                                <DataGrid
+                                    rows={getRows()}
+                                    columns={getFields()}
+                                    initialState={{
+                                        pagination: {
+                                            paginationModel: {
+                                                pageSize: 1,
+                                            },
+                                        },
+                                    }}
+                                    pageSizeOptions={[1]}
+                                />
+                            </Grid>
+
+                            <Grid xs={12}>
+                                <Box
+                                    component="img"
+                                    sx={{
+                                        width: 595,
+                                        maxHeight: { xs: 300, md: 300 },
+                                        maxWidth: { xs: 595, md: 595 },
+                                        'object-fit': 'cover'
+                                    }}
+                                    src={imageTemplate}
+                                />
+                            </Grid>
+                        </Grid>
                     </TabPanel>
                 </TabContext>
             </Box>
-        </div>
+        </div >
     )
 }
 
